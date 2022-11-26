@@ -7,7 +7,6 @@ using System.IO;
 namespace NoobCodTestTask
 {
     [Delimiter(",")]
-    //[CultureInfo("")]
     public class Post
     {
         [Name("text")]
@@ -24,7 +23,7 @@ namespace NoobCodTestTask
         {
             // Читаем csv
             // указываем путь к файлу csv
-            string pathCsvFile = "...\\posts\\posts.csv";
+            string pathCsvFile = "C:\\Users\\Ruslan\\source\\repos\\NoobCodTestTask\\posts\\posts.csv";
             using (var reader = new StreamReader(pathCsvFile))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
