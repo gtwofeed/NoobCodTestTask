@@ -1,8 +1,7 @@
 ﻿using CsvHelper;
 using CsvHelper.Configuration.Attributes;
-using System.Collections;
+using Npgsql;
 using System.Globalization;
-using System.IO;
 
 namespace NoobCodTestTask
 {
@@ -19,10 +18,30 @@ namespace NoobCodTestTask
 
     internal class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
+            var connectionString = "Host=localhost;Username=postgres;Password=yfrfpe.obq;Database=stepik";
+            await using var dataSource = NpgsqlDataSource.Create(connectionString);
+
+            //// Insert some data
+            //await using (var cmd = dataSource.CreateCommand("INSERT INTO data (some_field) VALUES ($1)"))
+            //{
+            //    cmd.Parameters.AddWithValue("Hello world");
+            //    await cmd.ExecuteNonQueryAsync();
+            //}
+
+            // Retrieve all rows
+            await using (var cmd = dataSource.CreateCommand("SELECT title FROM book"))
+            await using (var reader = await cmd.ExecuteReaderAsync())
+            {
+                while (await reader.ReadAsync())
+                {
+                    Console.WriteLine(reader.GetString(0));
+                }
+            }
             // Читаем csv
             // указываем путь к файлу csv
+            Console.ReadKey();
             string pathCsvFile = "C:\\Users\\Ruslan\\source\\repos\\NoobCodTestTask\\posts\\posts.csv";
             using (var reader = new StreamReader(pathCsvFile))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
