@@ -20,15 +20,12 @@ namespace NoobCodTestTask
     {
         static async Task Main(string[] args)
         {
-            var connectionString = "Host=localhost;Username=postgres;Password=yfrfpe.obq;Database=stepik";
+            var connectionString = 
+                "Host=localhost;" +
+                "Username=postgres;" +
+                "Password=****;" +
+                "Database=stepik";
             await using var dataSource = NpgsqlDataSource.Create(connectionString);
-
-            //// Insert some data
-            //await using (var cmd = dataSource.CreateCommand("INSERT INTO data (some_field) VALUES ($1)"))
-            //{
-            //    cmd.Parameters.AddWithValue("Hello world");
-            //    await cmd.ExecuteNonQueryAsync();
-            //}
 
             // Retrieve all rows
             await using (var cmd = dataSource.CreateCommand("SELECT title FROM book"))
