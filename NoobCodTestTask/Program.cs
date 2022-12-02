@@ -27,7 +27,19 @@ namespace NoobCodTestTask
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
             //Проверяем поля конфига
-            if (config.AppSettings.Settings["nameFile"].Value == "falsenull") config.AppSettings.Settings["nameFile"].Value = Console.ReadLine();
+            if (config.AppSettings.Settings["nameFile"].Value == "falsenull")
+            {
+                config.AppSettings.Settings["nameFile"].Value = Console.ReadLine();
+                config.Save();
+            }
+
+                // Read all the keys from the config file
+                NameValueCollection sAll;
+            sAll = ConfigurationManager.AppSettings;
+
+            foreach (string s in sAll.AllKeys)
+                Console.WriteLine(s + ": " +sAll.Get(s));
+            Console.ReadLine();
         }
         static async Task RoughDraft()
         {
@@ -77,7 +89,7 @@ namespace NoobCodTestTask
             sAll = ConfigurationManager.AppSettings;
 
             foreach (string s in sAll.AllKeys)
-                Console.WriteLine("Setting1: " + s + " Value: " + sAll.Get(s));
+                Console.WriteLine(s + " Value: " + sAll.Get(s));
             Console.ReadLine();
         }
     }
