@@ -20,9 +20,9 @@ namespace NoobCodTestTask
     {
         static async Task Main(string[] args)
         {
-            
+            await RoughDraft();
         }
-        static async Task Temp()
+        static async Task RoughDraft()
         {
             var connectionString =
                 "Host=localhost;" +
