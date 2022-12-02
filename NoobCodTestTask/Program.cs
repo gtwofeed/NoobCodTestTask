@@ -20,7 +20,11 @@ namespace NoobCodTestTask
     {
         static async Task Main(string[] args)
         {
-            var connectionString = 
+            
+        }
+        static async Task Temp()
+        {
+            var connectionString =
                 "Host=localhost;" +
                 "Username=postgres;" +
                 "Password=****;" +
@@ -46,7 +50,7 @@ namespace NoobCodTestTask
                 var records = csv.GetRecords<Post>();
                 Console.ReadKey();
             }
-            
+
             // Заполняем БД
             // Подключаемся к эластика
             // Обрабатываем поисковый запрос
