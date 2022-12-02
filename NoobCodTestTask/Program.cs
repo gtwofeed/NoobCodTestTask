@@ -2,6 +2,9 @@
 using CsvHelper.Configuration.Attributes;
 using Npgsql;
 using System.Globalization;
+using System.Configuration;
+using System.Collections.Specialized;
+
 
 namespace NoobCodTestTask
 {
@@ -20,7 +23,22 @@ namespace NoobCodTestTask
     {
         static async Task Main(string[] args)
         {
-            await RoughDraft();
+            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            config.AppSettings.Settings["Setting1"].Value = "3";
+            config.Save();
+
+            ConfigurationManager.RefreshSection("appSettings");
+
+            Console.WriteLine("appSettings[Setting1] = {0}",
+                config.AppSettings.Settings["Setting1"].Value);
+
+            // Read all the keys from the config file
+            NameValueCollection sAll;
+            sAll = ConfigurationManager.AppSettings;
+
+            foreach (string s in sAll.AllKeys)
+                Console.WriteLine("Setting1: " + s + " Value: " + sAll.Get(s));
+            Console.ReadLine();
         }
         static async Task RoughDraft()
         {
@@ -54,6 +72,29 @@ namespace NoobCodTestTask
             // Заполняем БД
             // Подключаемся к эластика
             // Обрабатываем поисковый запрос
+            // Правим конфиг
+            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+            config.AppSettings.Settings["Setting3"].Value = "3";
+            config.Save();
+
+            ConfigurationManager.RefreshSection("appSettings");
+
+            Console.WriteLine("appSettings[Setting1] = {0}",
+                config.AppSettings.Settings["Setting1"].Value);
+
+            string sAttr;
+
+            // Read a particular key from the config file 
+            sAttr = config.AppSettings.Settings["Setting1"].Value;
+            Console.WriteLine("The value of Setting1: " + sAttr);
+
+            // Read all the keys from the config file
+            NameValueCollection sAll;
+            sAll = ConfigurationManager.AppSettings;
+
+            foreach (string s in sAll.AllKeys)
+                Console.WriteLine("Setting1: " + s + " Value: " + sAll.Get(s));
+            Console.ReadLine();
         }
     }
 }
