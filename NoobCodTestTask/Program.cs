@@ -23,7 +23,11 @@ namespace NoobCodTestTask
     {
         static async Task Main(string[] args)
         {
-            
+            // Читаем конфиг
+            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+
+            //Проверяем поля конфига
+            if (config.AppSettings.Settings["nameFile"].Value == "falsenull") config.AppSettings.Settings["nameFile"].Value = Console.ReadLine();
         }
         static async Task RoughDraft()
         {
@@ -60,13 +64,13 @@ namespace NoobCodTestTask
 
             // Правим конфиг
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-            config.AppSettings.Settings["Setting1"].Value = "3";
+            config.AppSettings.Settings["nameFile"].Value = Console.ReadLine();
             config.Save();
 
             ConfigurationManager.RefreshSection("appSettings");
 
-            Console.WriteLine("appSettings[Setting1] = {0}",
-                config.AppSettings.Settings["Setting1"].Value);
+            Console.WriteLine(config.AppSettings.Settings["nameFile"].Value);
+            Console.ReadLine();
 
             // Read all the keys from the config file
             NameValueCollection sAll;
