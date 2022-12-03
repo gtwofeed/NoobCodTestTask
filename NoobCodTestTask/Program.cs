@@ -32,13 +32,19 @@ namespace NoobCodTestTask
                 config.AppSettings.Settings["nameFile"].Value = Console.ReadLine();
                 config.Save();
             }
+            else config.AppSettings.Settings["nameFile"].Value;
 
-                // Read all the keys from the config file
-                NameValueCollection sAll;
-            sAll = ConfigurationManager.AppSettings;
+            // Конектимся к БД
+            string hostDB = "Host=";
+            string userNameDB = "Username=";
+            string passwordDB = "Password=";
+            string nameDB = "Database=";
 
-            foreach (string s in sAll.AllKeys)
-                Console.WriteLine(s + ": " +sAll.Get(s));
+            hostDB += 
+
+            string connectionString = hostDB + ";" + userNameDB + ";" + passwordDB + ";" + nameDB + ";";
+            await using var dataSource = NpgsqlDataSource.Create(connectionString);
+
             Console.ReadLine();
         }
         static async Task RoughDraft()
@@ -47,7 +53,7 @@ namespace NoobCodTestTask
                 "Host=localhost;" +
                 "Username=postgres;" +
                 "Password=****;" +
-                "Database=stepik";
+                "Database=post";
             await using var dataSource = NpgsqlDataSource.Create(connectionString);
 
             // Retrieve all rows
