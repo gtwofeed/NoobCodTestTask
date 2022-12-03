@@ -88,9 +88,9 @@ namespace NoobCodTestTask
         internal static async Task DateBaseWrite(Post post, NpgsqlDataSource dataSource)
         {
             // Insert some data
-            await using (var cmd = dataSource.CreateCommand("INSERT INTO message (text) VALUES (Hello    world)"))
+            await using (var cmd = dataSource.CreateCommand("INSERT INTO message (text) VALUES ($1)"))
             {
-                //cmd.Parameters.AddWithValue("Hello world");
+                cmd.Parameters.AddWithValue("Hello world");
                 await cmd.ExecuteNonQueryAsync();
             }
             Console.ReadKey();
