@@ -11,6 +11,7 @@ namespace NoobCodTestTask
     [Delimiter(",")]
     public class Post
     {
+        static int Id { get; set; }
         [Name("text")]
         public string Text { get; set; }
         [Name("created_date")]
@@ -21,6 +22,8 @@ namespace NoobCodTestTask
 
     internal class Program
     {
+        private static string connectionString;
+
         static async Task Main(string[] args)
         {
             // Читаем конфиг
@@ -29,18 +32,27 @@ namespace NoobCodTestTask
             //Проверяем поля конфига
             if (config.AppSettings.Settings["nameFile"].Value == "falsenull")
             {
+                Console.Write("Введите путь к файлу данных: ");
                 config.AppSettings.Settings["nameFile"].Value = Console.ReadLine();
                 config.Save();
             }
-            else config.AppSettings.Settings["nameFile"].Value;
+            else Console.Write("Используется следующий файл данных: " + config.AppSettings.Settings["nameFile"].Value);
+
+            // Читаем csv
+            // указываем путь к файлу csv
+            string nameFile = config.AppSettings.Settings["nameFile"].Value;
+            using (var reader = new StreamReader(nameFile))
+            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            {
+                var records = csv.GetRecords<Post>();
+                Console.ReadKey();
+            }
 
             // Конектимся к БД
             string hostDB = "Host=";
             string userNameDB = "Username=";
             string passwordDB = "Password=";
             string nameDB = "Database=";
-
-            hostDB += 
 
             string connectionString = hostDB + ";" + userNameDB + ";" + passwordDB + ";" + nameDB + ";";
             await using var dataSource = NpgsqlDataSource.Create(connectionString);
