@@ -75,11 +75,14 @@ namespace NoobCodTestTask
             using (var csv = new CsvReader(readerFile, CultureInfo.InvariantCulture))
             {
                 // Конектимся к БД
-                var dataSource = DateBaseConect(config);
+                var conn = DateBaseConect(config);
 
                 var records = csv.GetRecords<Post>();
 
                 HashSet<int> chekDistValue = new();
+
+                await conn.OpenAsync();
+                
                 foreach (var post in records)
                 {
                     // Заполняем таблицу message
@@ -92,18 +95,23 @@ namespace NoobCodTestTask
                     //}
 
                     // Заполняем таблицу rubrics
-                    await using (var cmd = dataSource.CreateCommand("INSERT INTO rubrics (rubrics_id, rubrics_name) VALUES ($1, $2)"))
+                    await using var transaction = await conn.BeginTransactionAsync();
+                    foreach (var rubric in post.rubricsDist)
                     {
-                        foreach (var rubric in post.rubricsDist)
+                        if (chekDistValue.Add(rubric.Value))
                         {
-                            if (chekDistValue.Add(rubric.Value))
+                            await using var cmd = new NpgsqlCommand("INSERT INTO rubrics (rubrics_id, rubrics_name) VALUES ($1, $2)", conn, transaction)
                             {
-                                cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, rubric.Value);
-                                cmd.Parameters.AddWithValue(rubric.Key);
-                                await cmd.ExecuteNonQueryAsync();
-                            }
+                                Parameters =
+                                {
+                                    new() { Value = rubric.Value },
+                                    new() { Value = rubric.Key }
+                                }
+                            };
+                            await cmd.ExecuteNonQueryAsync();
                         }
                     }
+                    await transaction.CommitAsync();
 
                     // Заполняем связывающию таблицу message_rubrics
                     //await using (var cmd = dataSource.CreateCommand("INSERT INTO message_rubrics (text_id, rubrics_id) VALUES ($1, $2)"))
@@ -121,7 +129,7 @@ namespace NoobCodTestTask
             Console.WriteLine("END");
 
         }
-        internal static NpgsqlDataSource DateBaseConect(Configuration config)
+        internal static NpgsqlConnection DateBaseConect(Configuration config)
         {
             // Конектимся к БД
             string hostDB = "Host=" + config.AppSettings.Settings["hostDB"].Value;
@@ -131,8 +139,8 @@ namespace NoobCodTestTask
 
             string connectionString = hostDB + ";" + userNameDB + ";" + passwordDB + ";" + nameDB + ";";
             var dataSource = NpgsqlDataSource.Create(connectionString);
-            // var conn = new NpgsqlConnection(connectionString);
-            return dataSource;
+            var conn = new NpgsqlConnection(connectionString);
+            return conn;
 
         }
         internal static async Task DateBaseWrite(Post post, NpgsqlDataSource dataSource)
