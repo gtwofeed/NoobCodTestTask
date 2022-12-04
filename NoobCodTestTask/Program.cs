@@ -7,7 +7,9 @@ using System.Collections.Specialized;
 using System.Xml.Linq;
 using System.Collections.Generic;
 using NpgsqlDbType = NpgsqlTypes.NpgsqlDbType;
-
+using Nest;
+using System;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace NoobCodTestTask
 {
@@ -62,6 +64,13 @@ namespace NoobCodTestTask
             }
             else Console.WriteLine("Используется следующий файл данных: " + config.AppSettings.Settings["nameFile"].Value);
             string nameFile = config.AppSettings.Settings["nameFile"].Value;
+
+            // Подключаемся к эластик
+            string indexElastic = "0";
+            var settings = new ConnectionSettings(new Uri("http://localhost:9200")).DefaultIndex(indexElastic);
+            var clientElastic = new ElasticClient(settings);
+
+            Dictionary<int, string> text = new();
 
             // Читаем csv
             // указываем путь к файлу csv
@@ -122,11 +131,33 @@ namespace NoobCodTestTask
                             }                            
                         };
                         await cmd3.ExecuteNonQueryAsync();
-                    }                    
+                    }    
+                    
                     await transaction.CommitAsync(); // завершаем транзакцию
+
+                    // Отправляем text и id в эластик
+                    var asyncIndexResponse = await clientElastic.IndexDocumentAsync(post);
+
+
                 }
             }
-            Console.WriteLine("END");
+            Console.Write("ПОИСК: ");
+            string serch = Console.ReadLine();
+            var searchRequest = new SearchRequest<Post>(Nest.Indices.All)
+            {
+                From = 0,
+                Size = 2,
+                Query = new MatchQuery
+                {
+                    Field = Infer.Field<Post>(f => f.Text),
+                    Query = serch
+                }
+            };
+
+            var searchResponse = await clientElastic.SearchAsync<Post>(searchRequest);
+            Console.WriteLine();
+
+
 
         }
         internal static NpgsqlConnection DateBaseConect(Configuration config)
@@ -138,7 +169,7 @@ namespace NoobCodTestTask
             string nameDB = "Database=" + config.AppSettings.Settings["nameDB"].Value;
 
             string connectionString = hostDB + ";" + userNameDB + ";" + passwordDB + ";" + nameDB + ";";
-            var dataSource = NpgsqlDataSource.Create(connectionString);
+            var dataSource = NpgsqlDataSource.Create(connectionString); // возможно пригодиться на вытягивании
             var conn = new NpgsqlConnection(connectionString);
             return conn;
 
