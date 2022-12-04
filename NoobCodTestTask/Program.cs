@@ -14,9 +14,12 @@ namespace NoobCodTestTask
     [Delimiter(",")]
     public class Post
     {
-        public static readonly string[] split = { "['", "']", "', '" };
-        string[] rubricsList;
+        static readonly string[] split = { "['", "']", "', '" };
+        public static Dictionary<string, int> rubricsDistAll;
         static int countId;
+        public Dictionary<string, int> rubricsDist = new();
+        //string[] rubricsListName;
+        //List<int> rubricsListId;
         [Name("text")]
         public string Text { get; set; }
         [Name("created_date")]
@@ -24,14 +27,28 @@ namespace NoobCodTestTask
         [Name("rubrics")]
         public string Rubrics
         {
-            get { return string.Join(", ", rubricsList); }            
-            set { rubricsList = value.Split(split, StringSplitOptions.RemoveEmptyEntries); }
+            get { return string.Join(", ", rubricsDist.Keys); }
+            set
+            {
+                foreach (var rubric in value.Split(split, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    rubricsDistAll.TryAdd(rubric, rubricsDistAll.Count + 1);
+                    rubricsDist.TryAdd(rubric, rubricsDistAll[rubric]);
+                }
+                //    = value.Split(split, StringSplitOptions.RemoveEmptyEntries);
+                //foreach (var rubric in rubricsListName)
+                //{
+                //    rubricsDist.TryAdd(rubric, rubricsDist.Count + 1);
+                //    rubricsListId.Add(rubricsDist[rubric]);
+                //}
+            }
         }
         public int Id 
         { 
             get { return id; }
         }
         int id;
+        static Post() { rubricsDistAll = new(); }
         public Post() { id = ++countId; }
     }
 
@@ -61,28 +78,43 @@ namespace NoobCodTestTask
                 var dataSource = DateBaseConect(config);
 
                 var records = csv.GetRecords<Post>();
+
+                HashSet<int> chekDistValue = new();
                 foreach (var post in records)
                 {
                     // Заполняем таблицу message
-                    await using (var cmd = dataSource.CreateCommand("INSERT INTO message (text_id, text, created_date) VALUES ($1, $2, $3)"))
-                    {
-                        cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, post.Id);
-                        cmd.Parameters.AddWithValue(post.Text);
-                        cmd.Parameters.AddWithValue(NpgsqlDbType.Timestamp, post.CreatedDate);
-                        await cmd.ExecuteNonQueryAsync();
-                    }
+                    //await using (var cmd = dataSource.CreateCommand("INSERT INTO message (text_id, text, created_date) VALUES ($1, $2, $3)"))
+                    //{
+                    //    cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, post.Id);
+                    //    cmd.Parameters.AddWithValue(post.Text);
+                    //    cmd.Parameters.AddWithValue(NpgsqlDbType.Timestamp, post.CreatedDate);
+                    //    await cmd.ExecuteNonQueryAsync();
+                    //}
 
                     // Заполняем таблицу rubrics
-                    await using (var cmd = dataSource.CreateCommand("INSERT INTO rubrics (rubrics_name) VALUES ($1)"))
+                    await using (var cmd = dataSource.CreateCommand("INSERT INTO rubrics (rubrics_id, rubrics_name) VALUES ($1, $2)"))
                     {
-                        foreach (var rubrics_name in post.Rubrics)
+                        foreach (var rubric in post.rubricsDist)
                         {
-                            cmd.Parameters.AddWithValue(rubrics_name);
-                            await cmd.ExecuteNonQueryAsync();
+                            if (chekDistValue.Add(rubric.Value))
+                            {
+                                cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, rubric.Value);
+                                cmd.Parameters.AddWithValue(rubric.Key);
+                                await cmd.ExecuteNonQueryAsync();
+                            }
                         }
                     }
 
                     // Заполняем связывающию таблицу message_rubrics
+                    //await using (var cmd = dataSource.CreateCommand("INSERT INTO message_rubrics (text_id, rubrics_id) VALUES ($1, $2)"))
+                    //{
+                    //    foreach (var rubric in post.rubricsDist)
+                    //    {
+                    //        cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, post.Id);
+                    //        cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, rubric.Value);
+                    //        await cmd.ExecuteNonQueryAsync();
+                    //    }
+                    //}
                 }
 
             }
