@@ -35,12 +35,6 @@ namespace NoobCodTestTask
                     rubricsDistAll.TryAdd(rubric, rubricsDistAll.Count + 1);
                     rubricsDist.TryAdd(rubric, rubricsDistAll[rubric]);
                 }
-                //    = value.Split(split, StringSplitOptions.RemoveEmptyEntries);
-                //foreach (var rubric in rubricsListName)
-                //{
-                //    rubricsDist.TryAdd(rubric, rubricsDist.Count + 1);
-                //    rubricsListId.Add(rubricsDist[rubric]);
-                //}
             }
         }
         public int Id 
@@ -85,7 +79,6 @@ namespace NoobCodTestTask
                 
                 foreach (var post in records)
                 {
-
                     await using var transaction = await conn.BeginTransactionAsync(); // открываем транзакцию
 
                     // Заполняем таблицу message
@@ -99,14 +92,6 @@ namespace NoobCodTestTask
                         }
                     };
                     await cmd1.ExecuteNonQueryAsync();
-
-                    //await using (var cmd = dataSource.CreateCommand("INSERT INTO message (text_id, text, created_date) VALUES ($1, $2, $3)"))
-                    //{
-                    //    cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, post.Id);
-                    //    cmd.Parameters.AddWithValue(post.Text);
-                    //    cmd.Parameters.AddWithValue(NpgsqlDbType.Timestamp, post.CreatedDate);
-                    //    await cmd.ExecuteNonQueryAsync();
-                    //}
 
                     // Заполняем таблицу rubrics
                     foreach (var rubric in post.rubricsDist)
@@ -124,7 +109,6 @@ namespace NoobCodTestTask
                             await cmd2.ExecuteNonQueryAsync();
                         }
                     }
-                    // await transaction.CommitAsync(); // завершаем транзакцию
 
                     // Заполняем связывающию таблицу message_rubrics
                     foreach (var rubric in post.rubricsDist)
@@ -138,20 +122,9 @@ namespace NoobCodTestTask
                             }                            
                         };
                         await cmd3.ExecuteNonQueryAsync();
-                    }
-                    
+                    }                    
                     await transaction.CommitAsync(); // завершаем транзакцию
-                    //await using (var cmd = dataSource.CreateCommand("INSERT INTO message_rubrics (text_id, rubrics_id) VALUES ($1, $2)"))
-                    //{
-                    //    foreach (var rubric in post.rubricsDist)
-                    //    {
-                    //        cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, post.Id);
-                    //        cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, rubric.Value);
-                    //        await cmd.ExecuteNonQueryAsync();
-                    //    }
-                    //}
                 }
-
             }
             Console.WriteLine("END");
 
@@ -169,24 +142,6 @@ namespace NoobCodTestTask
             var conn = new NpgsqlConnection(connectionString);
             return conn;
 
-        }
-        internal static async Task DateBaseWrite(Post post, NpgsqlDataSource dataSource)
-        {
-            //string values = string.Format("{0}, '{1}', '{2}'", post.Id, post.Text, post.CreatedDate);
-            //int count = 0;
-            //Console.WriteLine($"INSERT INTO message (text_id, text, created_date) VALUES ({post.Id}, '{post.Text}', '{post.CreatedDate}'");
-            //await using (var cmd = dataSource.CreateCommand($"INSERT INTO message (text_id, text, created_date) VALUES (1, 'drha', '{post.CreatedDate}'"));
-            //await cmd.ExecuteNonQueryAsync();
-            //{
-            //cmd.Parameters.AddWithValue(values);
-            //Console.WriteLine(++count);
-            // dataSource
-            //}
-            //string values = string.Format("{0}, '{1}', '{2}'", post.Id, post.Text, post.CreatedDate);
-            //await conn.OpenAsync();
-            await using var cmd = dataSource.CreateCommand($"INSERT INTO message (text_id, text, created_date) VALUES ({post.Id}, '{post.Text}', '{post.CreatedDate}'");
-            await cmd.ExecuteNonQueryAsync();
-            //Console.ReadLine();
         }
         internal static async Task RoughDraft()
         {
