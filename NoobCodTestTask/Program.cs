@@ -85,7 +85,21 @@ namespace NoobCodTestTask
                 
                 foreach (var post in records)
                 {
+
+                    await using var transaction = await conn.BeginTransactionAsync(); // открываем транзакцию
+
                     // Заполняем таблицу message
+                    await using var cmd1 = new NpgsqlCommand("INSERT INTO message (text_id, text, created_date) VALUES ($1, $2, $3)", conn, transaction)
+                    {
+                        Parameters =
+                        {
+                            new() { Value = post.Id },
+                            new() { Value = post.Text },
+                            new() { Value = post.CreatedDate }
+                        }
+                    };
+                    await cmd1.ExecuteNonQueryAsync();
+
                     //await using (var cmd = dataSource.CreateCommand("INSERT INTO message (text_id, text, created_date) VALUES ($1, $2, $3)"))
                     //{
                     //    cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, post.Id);
@@ -95,12 +109,11 @@ namespace NoobCodTestTask
                     //}
 
                     // Заполняем таблицу rubrics
-                    await using var transaction = await conn.BeginTransactionAsync();
                     foreach (var rubric in post.rubricsDist)
                     {
                         if (chekDistValue.Add(rubric.Value))
                         {
-                            await using var cmd = new NpgsqlCommand("INSERT INTO rubrics (rubrics_id, rubrics_name) VALUES ($1, $2)", conn, transaction)
+                            await using var cmd2 = new NpgsqlCommand("INSERT INTO rubrics (rubrics_id, rubrics_name) VALUES ($1, $2)", conn, transaction)
                             {
                                 Parameters =
                                 {
@@ -108,12 +121,26 @@ namespace NoobCodTestTask
                                     new() { Value = rubric.Key }
                                 }
                             };
-                            await cmd.ExecuteNonQueryAsync();
+                            await cmd2.ExecuteNonQueryAsync();
                         }
                     }
-                    await transaction.CommitAsync();
+                    // await transaction.CommitAsync(); // завершаем транзакцию
 
                     // Заполняем связывающию таблицу message_rubrics
+                    foreach (var rubric in post.rubricsDist)
+                    {
+                        await using var cmd3 = new NpgsqlCommand("INSERT INTO message_rubrics (text_id, rubrics_id) VALUES ($1, $2)", conn, transaction)
+                        {
+                            Parameters =
+                            {
+                                new() { Value = post.Id },
+                                new() { Value = rubric.Value } 
+                            }                            
+                        };
+                        await cmd3.ExecuteNonQueryAsync();
+                    }
+                    
+                    await transaction.CommitAsync(); // завершаем транзакцию
                     //await using (var cmd = dataSource.CreateCommand("INSERT INTO message_rubrics (text_id, rubrics_id) VALUES ($1, $2)"))
                     //{
                     //    foreach (var rubric in post.rubricsDist)
