@@ -6,6 +6,7 @@ using System.Configuration;
 using System.Collections.Specialized;
 using System.Xml.Linq;
 using System.Collections.Generic;
+using NpgsqlDbType = NpgsqlTypes.NpgsqlDbType;
 
 
 namespace NoobCodTestTask
@@ -33,10 +34,6 @@ namespace NoobCodTestTask
         int id;
         public Post() { id = ++countId; }
     }
-    internal class ConectDB
-    {
-
-    }
 
     internal class Program
     {
@@ -52,24 +49,44 @@ namespace NoobCodTestTask
                 config.AppSettings.Settings["nameFile"].Value = Console.ReadLine();
                 config.Save();
             }
-            else Console.Write("Используется следующий файл данных: " + config.AppSettings.Settings["nameFile"].Value);
+            else Console.WriteLine("Используется следующий файл данных: " + config.AppSettings.Settings["nameFile"].Value);
             string nameFile = config.AppSettings.Settings["nameFile"].Value;
 
             // Читаем csv
             // указываем путь к файлу csv
-
-            using (var reader = new StreamReader(nameFile))
-            using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+            using (var readerFile = new StreamReader(nameFile))
+            using (var csv = new CsvReader(readerFile, CultureInfo.InvariantCulture))
             {
-                var records = csv.GetRecords<Post>();
+                // Конектимся к БД
                 var dataSource = DateBaseConect(config);
+
+                var records = csv.GetRecords<Post>();
                 foreach (var post in records)
                 {
-                    DateBaseWrite(post, dataSource);
-                    Console.ReadKey();
+                    // Заполняем таблицу message
+                    await using (var cmd = dataSource.CreateCommand("INSERT INTO message (text_id, text, created_date) VALUES ($1, $2, $3)"))
+                    {
+                        cmd.Parameters.AddWithValue(NpgsqlDbType.Integer, post.Id);
+                        cmd.Parameters.AddWithValue(post.Text);
+                        cmd.Parameters.AddWithValue(NpgsqlDbType.Timestamp, post.CreatedDate);
+                        await cmd.ExecuteNonQueryAsync();
+                    }
+
+                    // Заполняем таблицу rubrics
+                    await using (var cmd = dataSource.CreateCommand("INSERT INTO rubrics (rubrics_name) VALUES ($1)"))
+                    {
+                        foreach (var rubrics_name in post.Rubrics)
+                        {
+                            cmd.Parameters.AddWithValue(rubrics_name);
+                            await cmd.ExecuteNonQueryAsync();
+                        }
+                    }
+
+                    // Заполняем связывающию таблицу message_rubrics
                 }
-                
+
             }
+            Console.WriteLine("END");
 
         }
         internal static NpgsqlDataSource DateBaseConect(Configuration config)
@@ -82,18 +99,27 @@ namespace NoobCodTestTask
 
             string connectionString = hostDB + ";" + userNameDB + ";" + passwordDB + ";" + nameDB + ";";
             var dataSource = NpgsqlDataSource.Create(connectionString);
+            // var conn = new NpgsqlConnection(connectionString);
             return dataSource;
 
         }
         internal static async Task DateBaseWrite(Post post, NpgsqlDataSource dataSource)
         {
-            // Insert some data
-            await using (var cmd = dataSource.CreateCommand("INSERT INTO message (text) VALUES ($1)"))
-            {
-                cmd.Parameters.AddWithValue("Hello world");
-                await cmd.ExecuteNonQueryAsync();
-            }
-            Console.ReadKey();
+            //string values = string.Format("{0}, '{1}', '{2}'", post.Id, post.Text, post.CreatedDate);
+            //int count = 0;
+            //Console.WriteLine($"INSERT INTO message (text_id, text, created_date) VALUES ({post.Id}, '{post.Text}', '{post.CreatedDate}'");
+            //await using (var cmd = dataSource.CreateCommand($"INSERT INTO message (text_id, text, created_date) VALUES (1, 'drha', '{post.CreatedDate}'"));
+            //await cmd.ExecuteNonQueryAsync();
+            //{
+            //cmd.Parameters.AddWithValue(values);
+            //Console.WriteLine(++count);
+            // dataSource
+            //}
+            //string values = string.Format("{0}, '{1}', '{2}'", post.Id, post.Text, post.CreatedDate);
+            //await conn.OpenAsync();
+            await using var cmd = dataSource.CreateCommand($"INSERT INTO message (text_id, text, created_date) VALUES ({post.Id}, '{post.Text}', '{post.CreatedDate}'");
+            await cmd.ExecuteNonQueryAsync();
+            //Console.ReadLine();
         }
         internal static async Task RoughDraft()
         {
@@ -126,25 +152,26 @@ namespace NoobCodTestTask
 
 
             // Insert some data
+            //("INSERT INTO some_table (some_field) VALUES (8)");
+            //await command.ExecuteNonQueryAsync();
             await using (var cmd = dataSource.CreateCommand("INSERT INTO message (text) VALUES ($1)"))
             {
                 cmd.Parameters.AddWithValue("Hello world");
                 await cmd.ExecuteNonQueryAsync();
             }
-
             // Retrieve all rows
-            await using (var cmd = dataSource.CreateCommand("SELECT title FROM book"))
-            await using (var reader = await cmd.ExecuteReaderAsync())
+            await using (var cmd = dataSource.CreateCommand("SELECT table_name FROM information_schema.tables WHERE table_schema NOT IN ('information_schema','pg_catalog');"))
+            await using (var readerDB = await cmd.ExecuteReaderAsync())
             {
-                while (await reader.ReadAsync())
+                while (await readerDB.ReadAsync())
                 {
-                    Console.WriteLine(reader.GetString(0));
+                    Console.WriteLine(readerDB.GetString(0));
                 }
             }
 
             // Читаем csv
             // указываем путь к файлу csv
-            
+
             using (var reader = new StreamReader(nameFile))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
