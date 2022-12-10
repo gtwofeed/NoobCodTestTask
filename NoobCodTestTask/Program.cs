@@ -39,8 +39,8 @@ namespace NoobCodTestTask
                 }
             }
         }
-        public int Id 
-        { 
+        public int Id
+        {
             get { return id; }
         }
         int id;
@@ -53,9 +53,11 @@ namespace NoobCodTestTask
         internal static async Task Main(string[] args)
         {
             // Читаем конфиг
+            Console.WriteLine("Читаем конфиг");
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
             //Проверяем поля конфига
+            Console.WriteLine("Проверяем поля конфига");
             if (config.AppSettings.Settings["nameFile"].Value == "falsenull")
             {
                 Console.Write("Введите путь к файлу данных: ");
@@ -66,80 +68,77 @@ namespace NoobCodTestTask
             string nameFile = config.AppSettings.Settings["nameFile"].Value;
 
             // Подключаемся к эластик
+            Console.WriteLine("Подключаемся к эластик");
             string indexElastic = "0";
             var settings = new ConnectionSettings(new Uri("http://localhost:9200")).DefaultIndex(indexElastic);
             var clientElastic = new ElasticClient(settings);
 
-            Dictionary<int, string> text = new();
+            //Dictionary<int, string> text = new();
 
             // Читаем csv
+            Console.WriteLine("Читаем csv");
             // указываем путь к файлу csv
             using (var readerFile = new StreamReader(nameFile))
             using (var csv = new CsvReader(readerFile, CultureInfo.InvariantCulture))
             {
-                // Конектимся к БД
-                var conn = DateBaseConect(config);
-
-                var records = csv.GetRecords<Post>();
-
+                var records = csv.GetRecords<Post>().ToList();
                 HashSet<int> chekDistValue = new();
+                List<int> id = records.Select(x => x.Id).ToList();
+                List<string> text = records.Select(x => x.Text).ToList();
+                List<DateTime> createdDate = records.Select(x => x.CreatedDate).ToList();
+                List<string> rubricName = Post.rubricsDistAll.Select(x => x.Key).ToList();
+                List<int> rubricId = Post.rubricsDistAll.Select(x => x.Value).ToList();
+                // Конектимся к БД
+                Console.WriteLine("Конектимся к БД");
+                var connectionString = "Host=localhost;Username=postgres;Password=yfrfpe.obq;Database=post";
+                var conn = new NpgsqlConnection(connectionString);
+                conn.Open();
+                Console.WriteLine("открываем транзакцию");
+                var transaction = conn.BeginTransaction(); // открываем транзакцию
+                // Заполняем таблицу message
+                Console.WriteLine("Заполняем таблицы");
+                var cmd1 = new NpgsqlCommand("INSERT INTO message (text_id, text, created_date) select unnest ($1), unnest ($2), unnest ($3)", conn, transaction)
+                {
+                    Parameters =
+                        {
+                            new() { Value =  id},
+                            new() { Value =  text},
+                            new() { Value =  createdDate}
+                        }
+                };
+                cmd1.ExecuteNonQuery();
 
-                await conn.OpenAsync();
-                
+                // Заполняем таблицу rubrics
+                Console.WriteLine("Заполняем таблицу rubrics");
+                var cmd2 = new NpgsqlCommand("INSERT INTO rubrics (rubrics_id, rubrics_name) select unnest ($1), unnest ($2)", conn, transaction)
+                {
+                    Parameters =
+                    {
+                        new() { Value = rubricId },
+                        new() { Value = rubricName }
+                    }
+                };
+                cmd2.ExecuteNonQuery();
+
+                // Заполняем связывающию таблицу message_rubrics
+                Console.WriteLine("Заполняем связывающию таблицу message_rubrics");
                 foreach (var post in records)
                 {
-                    await using var transaction = await conn.BeginTransactionAsync(); // открываем транзакцию
-
-                    // Заполняем таблицу message
-                    await using var cmd1 = new NpgsqlCommand("INSERT INTO message (text_id, text, created_date) VALUES ($1, $2, $3)", conn, transaction)
-                    {
-                        Parameters =
-                        {
-                            new() { Value = post.Id },
-                            new() { Value = post.Text },
-                            new() { Value = post.CreatedDate }
-                        }
-                    };
-                    await cmd1.ExecuteNonQueryAsync();
-
-                    // Заполняем таблицу rubrics
                     foreach (var rubric in post.rubricsDist)
                     {
-                        if (chekDistValue.Add(rubric.Value))
-                        {
-                            await using var cmd2 = new NpgsqlCommand("INSERT INTO rubrics (rubrics_id, rubrics_name) VALUES ($1, $2)", conn, transaction)
-                            {
-                                Parameters =
-                                {
-                                    new() { Value = rubric.Value },
-                                    new() { Value = rubric.Key }
-                                }
-                            };
-                            await cmd2.ExecuteNonQueryAsync();
-                        }
-                    }
-
-                    // Заполняем связывающию таблицу message_rubrics
-                    foreach (var rubric in post.rubricsDist)
-                    {
-                        await using var cmd3 = new NpgsqlCommand("INSERT INTO message_rubrics (text_id, rubrics_id) VALUES ($1, $2)", conn, transaction)
+                        var cmd3 = new NpgsqlCommand("INSERT INTO message_rubrics (text_id, rubrics_id) VALUES ($1, $2)", conn, transaction)
                         {
                             Parameters =
-                            {
-                                new() { Value = post.Id },
-                                new() { Value = rubric.Value } 
-                            }                            
+                        {
+                            new() { Value = post.Id },
+                            new() { Value = rubric.Value }
+                        }
                         };
-                        await cmd3.ExecuteNonQueryAsync();
-                    }    
-                    
-                    await transaction.CommitAsync(); // завершаем транзакцию
-
-                    // Отправляем text и id в эластик
-                    var asyncIndexResponse = await clientElastic.IndexDocumentAsync(post);
-
-
+                        cmd3.ExecuteNonQuery();
+                    }
                 }
+                transaction.Commit(); // завершаем транзакцию                    
+                conn.Close(); // закрываем соединение
             }
             Console.Write("ПОИСК: ");
             string serch = Console.ReadLine();
@@ -156,9 +155,6 @@ namespace NoobCodTestTask
 
             var searchResponse = await clientElastic.SearchAsync<Post>(searchRequest);
             Console.WriteLine();
-
-
-
         }
         internal static NpgsqlConnection DateBaseConect(Configuration config)
         {
@@ -169,7 +165,7 @@ namespace NoobCodTestTask
             string nameDB = "Database=" + config.AppSettings.Settings["nameDB"].Value;
 
             string connectionString = hostDB + ";" + userNameDB + ";" + passwordDB + ";" + nameDB + ";";
-            var dataSource = NpgsqlDataSource.Create(connectionString); // возможно пригодиться на вытягивании
+            // var dataSource = NpgsqlDataSource.Create(connectionString); // возможно пригодиться на вытягивании
             var conn = new NpgsqlConnection(connectionString);
             return conn;
 
@@ -240,7 +236,7 @@ namespace NoobCodTestTask
 
             // Обрабатываем поисковый запрос
 
-            
+
         }
     }
 }
